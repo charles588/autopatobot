@@ -172,6 +172,10 @@ function checkPassword() {
 
 <!-- 📊 Bot Logic -->
 <script>
+const API_BASE_URL = window.location.hostname.includes('localhost')
+  ? 'http://localhost:3000'
+  : 'https://autopatobot.onrender.com'; // ✅ Your hosted backend
+
 let autoTrading = false;
 let chart;
 let tradingInterval = null;
@@ -204,9 +208,9 @@ function initChart() {
 async function fetchCandlestick() {
   try {
     const symbol = document.getElementById('pairSelect').value;
-    const res = await axios.get(`http://localhost:3000/api/candle?symbol=${symbol}`);
+    const res = await axios.get(`${API_BASE_URL}/api/candle?symbol=${symbol}`);
     const { time, open, high, low, close } = res.data;
-    return { t: time, o: open, h: high, l: low, c: close };
+    return { t: time || new Date(), o: open, h: high, l: low, c: close };
   } catch (err) {
     console.error('Candlestick Error:', err);
     return null;
@@ -299,7 +303,7 @@ function handleAutoTrade(signal, price, time) {
 function executeTrade(action) {
   const symbol = document.getElementById('pairSelect').value;
   const qty = parseFloat(document.getElementById('qtyInput').value);
-  axios.post('http://localhost:3000/api/trade', { action, symbol, quantity: qty })
+  axios.post(`${API_BASE_URL}/api/trade`, { action, symbol, quantity: qty })
     .then(res => console.log('Trade Success:', res.data))
     .catch(err => {
       console.error('Trade Error:', err);
