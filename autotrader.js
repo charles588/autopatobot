@@ -114,4 +114,4 @@ async function autoTradeLoop() {
 // === Launch Bot ===
 console.log('🚀 Starting SMA crossover bot...');
 autoTradeLoop(); // Run once immediately
-setInterval(autoTradeLoop, 5 * 60 * 1000); // Repeat every 5 minutes
+setInterval(autoTradeLoop, 5 * 60 * 1000); // Every 5 minutes

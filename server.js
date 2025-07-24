@@ -1,8 +1,12 @@
 const express = require('express');
+const cors = require('cors'); // ✅ Import CORS
 const app = express();
 
 // Use dynamic port for Render or default to 3000 locally
 const port = process.env.PORT || 3000;
+
+// ✅ Enable CORS for all routes
+app.use(cors());
 
 // Middleware
 app.use(express.static('public')); // Serve frontend files from 'public' folder

@@ -1,3 +1,5 @@
+require('dotenv').config(); // ✅ Load environment variables
+
 const axios = require('axios');
 const crypto = require('crypto');
 const fs = require('fs');
@@ -7,51 +9,70 @@ const API_SECRET = process.env.API_SECRET;
 const BINANCE_URL = 'https://api.binance.com';
 
 if (!API_KEY || !API_SECRET) {
-    console.error("❌ API_KEY or API_SECRET missing in .env file");
-    process.exit(1);
+  console.error("❌ API_KEY or API_SECRET missing in .env file");
+  process.exit(1);
 }
 
 const logFile = 'trading-log.txt';
 
 function logToFile(message) {
-    const time = new Date().toISOString();
-    fs.appendFileSync(logFile, `[${time}] ${message}\n`);
+  const time = new Date().toISOString();
+  fs.appendFileSync(logFile, `[${time}] ${message}\n`);
 }
 
 exports.executeTrade = async (req, res) => {
-    const { action, quantity, symbol } = req.body;
+  const { action, quantity, symbol } = req.body;
 
-    if (!action || !quantity || !symbol) {
-        return res.status(400).json({ error: "Missing required fields: action, quantity, or symbol." });
-    }
+  if (!action || !quantity || !symbol) {
+    return res.status(400).json({
+      error: "Missing required fields: action, quantity, or symbol."
+    });
+  }
 
-    const side = action.toUpperCase();
-    const timestamp = Date.now();
-    const fixedQty = parseFloat(quantity).toFixed(6); // Optional precision fix
+  const side = action.toUpperCase();
+  const timestamp = Date.now();
+  const fixedQty = parseFloat(quantity).toFixed(6); // Optional precision fix
 
-    const queryString = `symbol=${symbol}&side=${side}&type=MARKET&quantity=${fixedQty}&timestamp=${timestamp}`;
-    const signature = crypto.createHmac('sha256', API_SECRET)
-        .update(queryString)
-        .digest('hex');
+  const params = new URLSearchParams({
+    symbol,
+    side,
+    type: 'MARKET',
+    quantity: fixedQty,
+    timestamp: timestamp.toString()
+  });
 
-    const fullQuery = `${queryString}&signature=${signature}`;
+  const signature = crypto
+    .createHmac('sha256', API_SECRET)
+    .update(params.toString())
+    .digest('hex');
 
-    logToFile(`Trade Request: ${side} ${fixedQty} ${symbol}`);
+  params.append('signature', signature);
 
-    try {
-        const response = await axios.post(`${BINANCE_URL}/api/v3/order`, fullQuery, {
-            headers: {
-                'X-MBX-APIKEY': API_KEY,
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }
-        });
+  logToFile(`🔁 Trade Request: ${side} ${fixedQty} ${symbol}`);
 
-        logToFile(`Trade SUCCESS: ${side} ${fixedQty} ${symbol} | Response: ${JSON.stringify(response.data)}`);
-        res.json({ message: 'Trade executed successfully', data: response.data });
+  try {
+    const response = await axios.post(`${BINANCE_URL}/api/v3/order`, params.toString(), {
+      headers: {
+        'X-MBX-APIKEY': API_KEY,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
 
-    } catch (error) {
-        const errMsg = error.response?.data || error.message;
-        logToFile(`Trade ERROR: ${JSON.stringify(errMsg)}`);
-        res.status(500).json({ error: 'Trade failed', details: errMsg });
-    }
+    logToFile(`✅ Trade SUCCESS: ${side} ${fixedQty} ${symbol} | Response: ${JSON.stringify(response.data)}`);
+
+    res.json({
+      message: 'Trade executed successfully',
+      data: response.data
+    });
+
+  } catch (error) {
+    const errMsg = error.response?.data || error.message;
+    logToFile(`❌ Trade ERROR: ${JSON.stringify(errMsg)}`);
+
+    res.status(500).json({
+      error: 'Trade failed',
+      reason: error.response?.data?.msg || error.message || 'Unknown error',
+      binanceError: error.response?.data || null
+    });
+  }
 };
