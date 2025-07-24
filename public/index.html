@@ -2,18 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Swift Algo Auto Trader</title>
 
-  <!-- External Libraries -->
+  <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial"></script>
   <script src="https://cdn.jsdelivr.net/npm/date-fns"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 
-  <!-- Fonts & Styling -->
+  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
   <style>
     body {
       margin: 0;
@@ -21,38 +23,21 @@
       background: #0d1117;
       color: #c9d1d9;
     }
-
     .dashboard {
       display: grid;
       grid-template-columns: 2fr 1fr;
       gap: 20px;
       padding: 30px;
     }
-
     .card {
       background: #161b22;
       padding: 20px;
       border-radius: 12px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
     }
-
-    .control-panel button {
-      background: #238636;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-
-    .control-panel button:hover {
-      background: #2ea043;
-    }
-
-    select, input[type="number"] {
+    button, select, input[type="number"] {
       width: 100%;
-      padding: 8px;
+      padding: 10px;
       border: none;
       border-radius: 8px;
       background: #0d1117;
@@ -60,7 +45,11 @@
       margin-top: 5px;
       margin-bottom: 15px;
     }
-
+    button {
+      background: #238636;
+      cursor: pointer;
+    }
+    button:hover { background: #2ea043; }
     .log {
       height: 250px;
       overflow-y: auto;
@@ -70,7 +59,6 @@
       border-radius: 8px;
       font-size: 14px;
     }
-
     #authOverlay {
       position: fixed;
       inset: 0;
@@ -81,34 +69,16 @@
       justify-content: center;
       z-index: 9999;
     }
-
     #authOverlay input, #authOverlay button {
       margin-top: 10px;
       font-size: 16px;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
     }
-
     #authOverlay input {
       background: #161b22;
-      color: white;
       border: 1px solid #30363d;
       width: 220px;
     }
-
-    #authOverlay button {
-      background: #238636;
-      color: white;
-      cursor: pointer;
-    }
-
-    #authError {
-      color: #f85149;
-      margin-top: 10px;
-      display: none;
-    }
-
+    #authError { color: #f85149; display: none; margin-top: 10px; }
     footer {
       background: #161b22;
       padding: 15px;
@@ -119,10 +89,9 @@
     }
   </style>
 </head>
-
 <body>
 
-<!-- 🔐 Password Auth -->
+<!-- Auth Screen -->
 <div id="authOverlay">
   <h2>Enter Password</h2>
   <input type="password" id="passwordInput" placeholder="Password" />
@@ -130,19 +99,18 @@
   <p id="authError">Wrong password</p>
 </div>
 
-<!-- 📊 Dashboard -->
+<!-- Dashboard -->
 <div class="dashboard" id="dashboard" style="display:none;">
-  <!-- Chart Section -->
+  <!-- Chart -->
   <div class="card">
     <h2>SMA Crossover Chart</h2>
     <canvas id="tradeChart" height="300"></canvas>
   </div>
 
-  <!-- Controls & Trade Log -->
+  <!-- Controls -->
   <div class="card control-panel">
     <h2>Trading Control</h2>
-
-    <label for="pairSelect">Pair</label>
+    <label>Pair</label>
     <select id="pairSelect">
       <option value="BTCUSDT">BTC/USDT</option>
       <option value="ETHUSDT">ETH/USDT</option>
@@ -151,10 +119,10 @@
       <option value="XRPUSDT">XRP/USDT</option>
     </select>
 
-    <label for="qtyInput">Quantity</label>
+    <label>Quantity</label>
     <input type="number" id="qtyInput" step="0.0001" value="0.001" />
 
-    <label for="timeframeSelect">Timeframe</label>
+    <label>Timeframe</label>
     <select id="timeframeSelect">
       <option value="60000">1 Minute</option>
       <option value="300000" selected>5 Minutes</option>
@@ -169,40 +137,33 @@
   </div>
 </div>
 
-<!-- ℹ️ Disclaimer -->
+<!-- Footer -->
 <footer>
   <strong>Disclaimer:</strong> Cryptocurrency trading involves risk. Use at your own discretion.
 </footer>
 
-<!-- 🔐 Auth Logic -->
 <script>
-  const HARDCODED_PASSWORD = 'just4pat';
-
-  function checkPassword() {
-    const input = document.getElementById('passwordInput').value;
-    if (input === HARDCODED_PASSWORD) {
-      document.getElementById('authOverlay').style.display = 'none';
-      document.getElementById('dashboard').style.display = 'grid';
-      initChart();
-    } else {
-      const error = document.getElementById('authError');
-      error.style.display = 'block';
-    }
-  }
-</script>
-
-<!-- 📊 Chart + Bot Logic -->
-<script>
-  const API_BASE_URL = window.location.hostname.includes('localhost')
+  const PASSWORD = 'just4pat';
+  const API_BASE_URL = location.hostname.includes('localhost')
     ? 'http://localhost:3000'
     : 'https://autopatobot.onrender.com';
 
   let chart, tradingInterval, autoTrading = false, activePosition = null;
-  const maxCandles = 50, dataPoints = [];
+  const dataPoints = [], maxCandles = 50;
+
+  function checkPassword() {
+    const pass = document.getElementById('passwordInput').value;
+    if (pass === PASSWORD) {
+      document.getElementById('authOverlay').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'grid';
+      initChart();
+    } else {
+      document.getElementById('authError').style.display = 'block';
+    }
+  }
 
   function initChart() {
-    const ctx = document.getElementById('tradeChart').getContext('2d');
-    chart = new Chart(ctx, {
+    chart = new Chart(document.getElementById('tradeChart').getContext('2d'), {
       type: 'candlestick',
       data: {
         datasets: [
@@ -224,27 +185,29 @@
 
   async function fetchCandle() {
     const symbol = document.getElementById('pairSelect').value;
+    const intervalMs = parseInt(document.getElementById('timeframeSelect').value);
+    const intervalMap = { 60000: '1m', 300000: '5m', 900000: '15m' };
+    const interval = intervalMap[intervalMs] || '5m';
+
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/candle?symbol=${symbol}`);
+      const res = await axios.get(`${API_BASE_URL}/api/candle?symbol=${symbol}&interval=${interval}`);
       const { time, open, high, low, close } = res.data;
       return { t: time, o: open, h: high, l: low, c: close };
-    } catch (e) {
-      console.error('Candle fetch failed:', e);
+    } catch (err) {
+      console.error('Candle fetch failed:', err);
       return null;
     }
   }
 
-  function calculateSMA(data, period) {
-    if (data.length < period) return null;
-    const sum = data.slice(-period).reduce((acc, val) => acc + val, 0);
-    return sum / period;
+  function calculateSMA(data, len) {
+    if (data.length < len) return null;
+    return data.slice(-len).reduce((a, b) => a + b, 0) / len;
   }
 
   function getSMASignal() {
     if (dataPoints.length < 11) return 'HOLD';
     const [sma5, sma10] = [calculateSMA(dataPoints, 5), calculateSMA(dataPoints, 10)];
     const [prev5, prev10] = [calculateSMA(dataPoints.slice(0, -1), 5), calculateSMA(dataPoints.slice(0, -1), 10)];
-
     if (prev5 <= prev10 && sma5 > sma10) return 'BUY';
     if (prev5 >= prev10 && sma5 < sma10) return 'SELL';
     return 'HOLD';
@@ -266,49 +229,6 @@
     if (s10) sma10.data.push({ x: candle.t, y: s10 });
 
     chart.update();
-  }
-
-  function startTradingLoop() {
-    const interval = parseInt(document.getElementById('timeframeSelect').value);
-    if (tradingInterval) clearInterval(tradingInterval);
-
-    tradingInterval = setInterval(async () => {
-      const candle = await fetchCandle();
-      if (!candle) return;
-
-      updateChart(candle);
-
-      if (autoTrading) {
-        const signal = getSMASignal();
-        const price = candle.c;
-        const time = new Date(candle.t).toLocaleTimeString();
-
-        if (!activePosition) {
-          if (signal === 'BUY') {
-            activePosition = { type: 'buy', entry: price, sl: price * 0.99, tp: price * 1.02 };
-            executeTrade('buy');
-            logTrade(`${time} | BUY @ ${price.toFixed(2)}`);
-          } else if (signal === 'SELL') {
-            activePosition = { type: 'sell', entry: price, sl: price * 1.01, tp: price * 0.98 };
-            executeTrade('sell');
-            logTrade(`${time} | SELL @ ${price.toFixed(2)}`);
-          }
-        } else {
-          const { type, sl, tp } = activePosition;
-          const hitTP = type === 'buy' ? price >= tp : price <= tp;
-          const hitSL = type === 'buy' ? price <= sl : price >= sl;
-
-          if (hitTP || hitSL) {
-            const closeAction = type === 'buy' ? 'sell' : 'buy';
-            executeTrade(closeAction);
-            logTrade(`${time} | ${type.toUpperCase()} ${hitTP ? 'TP' : 'SL'} hit @ ${price.toFixed(2)}`);
-            activePosition = null;
-          } else {
-            logTrade(`${time} | ${type.toUpperCase()} position active`);
-          }
-        }
-      }
-    }, interval);
   }
 
   function executeTrade(action) {
@@ -334,10 +254,49 @@
     autoTrading = !autoTrading;
     document.getElementById('status').innerText = autoTrading ? 'Running' : 'Stopped';
     document.querySelector('.control-panel button').innerText = autoTrading ? 'Stop Auto Trading' : 'Start Auto Trading';
-    if (autoTrading) startTradingLoop();
-    else clearInterval(tradingInterval);
+    autoTrading ? startTradingLoop() : clearInterval(tradingInterval);
+  }
+
+  function startTradingLoop() {
+    const interval = parseInt(document.getElementById('timeframeSelect').value);
+    if (tradingInterval) clearInterval(tradingInterval);
+
+    tradingInterval = setInterval(async () => {
+      const candle = await fetchCandle();
+      if (!candle) return;
+      updateChart(candle);
+
+      if (autoTrading) {
+        const signal = getSMASignal();
+        const { c: price, t } = candle;
+        const time = new Date(t).toLocaleTimeString();
+
+        if (!activePosition) {
+          if (signal === 'BUY') {
+            activePosition = { type: 'buy', entry: price, sl: price * 0.99, tp: price * 1.02 };
+            executeTrade('buy');
+            logTrade(`${time} | BUY @ ${price.toFixed(2)}`);
+          } else if (signal === 'SELL') {
+            activePosition = { type: 'sell', entry: price, sl: price * 1.01, tp: price * 0.98 };
+            executeTrade('sell');
+            logTrade(`${time} | SELL @ ${price.toFixed(2)}`);
+          }
+        } else {
+          const { type, sl, tp } = activePosition;
+          const hitTP = type === 'buy' ? price >= tp : price <= tp;
+          const hitSL = type === 'buy' ? price <= sl : price >= sl;
+
+          if (hitTP || hitSL) {
+            executeTrade(type === 'buy' ? 'sell' : 'buy');
+            logTrade(`${time} | ${type.toUpperCase()} ${hitTP ? 'TP' : 'SL'} hit @ ${price.toFixed(2)}`);
+            activePosition = null;
+          } else {
+            logTrade(`${time} | ${type.toUpperCase()} position active`);
+          }
+        }
+      }
+    }, interval);
   }
 </script>
-
 </body>
 </html>

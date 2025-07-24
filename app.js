@@ -17,7 +17,7 @@ app.use(express.json());
 // ✅ Get latest 5m candlestick from Binance
 app.get('/api/candle', async (req, res) => {
     const symbol = req.query.symbol?.toUpperCase() || 'BTCUSDT';
-    const interval = '5m';
+   const interval = req.query.interval || '5m';
 
     try {
         const response = await axios.get('https://api.binance.com/api/v3/klines', {
