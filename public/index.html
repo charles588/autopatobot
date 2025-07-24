@@ -181,7 +181,7 @@
     });
     startTradingLoop();
   }
-const API_BASE_URL = window.location.origin;
+const API_BASE_URL = 'https://autopatobot.onrender.com';
   async function fetchCandle() {
     const symbol = document.getElementById('pairSelect').value;
     const intervalMs = parseInt(document.getElementById('timeframeSelect').value);
