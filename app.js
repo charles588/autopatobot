@@ -2,13 +2,15 @@ require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const crypto = require('crypto');
+const cors = require('cors'); // ✅ ADD CORS
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 // ===== MIDDLEWARE =====
-app.use(express.static('public'));  // Serve frontend
-app.use(express.json());            // Parse JSON
+app.use(cors());                   // ✅ ENABLE CORS for all origins
+app.use(express.static('public')); 
+app.use(express.json());
 
 // ===== ROUTES =====
 
