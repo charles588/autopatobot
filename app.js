@@ -93,5 +93,6 @@ app.post('/api/trade', async (req, res) => {
 
 // ===== START SERVER =====
 app.listen(port, () => {
-    console.log(`✅ Server running at: http://localhost:${port}`);
+  console.log(`✅ Server is live on port ${port}`);
+  console.log(`🌐 Visit on Render: https://autopatobot.onrender.com`);
 });
