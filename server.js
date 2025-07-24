@@ -6,9 +6,8 @@ app.use(express.static('public'));
 app.use(express.json());
 
 app.get('/', (req, res) => {
-  res.send('✅ Bot is running on Render!');
+  res.send('Server is live!');
 });
-
 app.get('/api/candle', (req, res) => {
   const base = 29500 + Math.random() * 100;
   const open = base;
