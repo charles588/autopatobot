@@ -189,7 +189,7 @@ const API_BASE_URL = 'https://autopatobot.onrender.com';
     const interval = intervalMap[intervalMs] || '5m';
 
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/candle?symbol=${symbol}&interval=${interval}`);
+     const res = await axios.get('https://autopatobot.onrender.com/api/candle?symbol=BTCUSDT');
       const { time, open, high, low, close } = res.data;
       return { t: time, o: open, h: high, l: low, c: close };
     } catch (err) {
