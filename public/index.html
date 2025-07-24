@@ -144,9 +144,8 @@
 
 <script>
   const PASSWORD = 'just4pat';
-  const API_BASE_URL = location.hostname.includes('localhost')
-    ? 'http://localhost:3000'
-    : 'https://autopatobot.onrender.com';
+ const API_BASE_URL = 'https://autopatobot.onrender.com';
+
 
   let chart, tradingInterval, autoTrading = false, activePosition = null;
   const dataPoints = [], maxCandles = 50;
