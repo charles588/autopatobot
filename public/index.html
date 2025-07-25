@@ -143,6 +143,7 @@
 </footer>
 
 <script id="main-script" data-version="3">
+  console.log('Page loaded');
   const PASSWORD = 'just4pat';
  const BASE_URL = window.location.origin;
 
@@ -160,7 +161,7 @@
       document.getElementById('authError').style.display = 'block';
     }
   }
-
+console.log('Init chart triggered');
   function initChart() {
     chart = new Chart(document.getElementById('tradeChart').getContext('2d'), {
       type: 'candlestick',
@@ -181,6 +182,7 @@
     });
     startTradingLoop();
   }
+  console.log('Fetching candlestick...');
 const API_BASE_URL = 'https://autopatobot.onrender.com';
   async function fetchCandle() {
     const symbol = document.getElementById('pairSelect').value;
