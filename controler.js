@@ -19,6 +19,35 @@ function logToFile(message) {
   const time = new Date().toISOString();
   fs.appendFileSync(logFile, `[${time}] ${message}\n`);
 }
+exports.getCandles = async (req, res) => {
+  const symbol = req.query.symbol || 'BTCUSDT';
+  try {
+    const { data } = await axios.get('https://api.binance.com/api/v3/klines', {
+      params: {
+        symbol,
+        interval: '5m',
+        limit: 50
+      }
+    });
+
+    const candles = data.map(k => ({
+      time: k[0],
+      open: parseFloat(k[1]),
+      high: parseFloat(k[2]),
+      low: parseFloat(k[3]),
+      close: parseFloat(k[4])
+    }));
+
+    if (!candles.length) {
+      return res.status(404).json({ error: 'No candles fetched' });
+    }
+
+    res.json({ candles });
+  } catch (error) {
+    console.error('Candle fetch error:', error.message);
+    res.status(500).json({ error: 'Error fetching candles' });
+  }
+};
 
 exports.executeTrade = async (req, res) => {
   const { action, quantity, symbol } = req.body;

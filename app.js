@@ -13,7 +13,8 @@ app.use(express.static('public'));
 app.use(express.json());
 
 // ===== ROUTES =====
-
+const candleRoutes = require('./routes/candleRoutes');
+app.use('/api', candleRoutes);
 // ✅ Get latest 5m candlestick from Binance
 app.get('/api/candle', async (req, res) => {
     const symbol = req.query.symbol?.toUpperCase() || 'BTCUSDT';

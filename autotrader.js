@@ -42,7 +42,7 @@ async function getRecentCandles() {
 function smaCrossoverStrategy(closes) {
   const sma5 = SMA.calculate({ period: 5, values: closes });
   const sma10 = SMA.calculate({ period: 10, values: closes });
-
+logToFile(`🔎 SMA History: ${JSON.stringify(sma5)}, ${JSON.stringify(sma10)}`);
   const latestSMA5 = sma5.at(-1);
   const latestSMA10 = sma10.at(-1);
 

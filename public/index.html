@@ -189,20 +189,33 @@ async function fetchCandle() {
 
   try {
     const res = await axios.get(`${API_BASE_URL}/api/candle?symbol=${symbol}&interval=${interval}`);
-    const { time, open, high, low, close } = res.data;
+    const candles = res.data.candles;
 
-    // Update chart data
-    const candle = { t: time, o: open, h: high, l: low, c: close };
-   // dataPoints.push(close);
-   // if (dataPoints.length > maxCandles) dataPoints.shift();
+    if (!Array.isArray(candles) || candles.length === 0) {
+      console.warn('⚠️ No candlestick data returned');
+      return null;
+    }
 
-    closes.push(close);
-    if (closes.length > maxCandles) closes.shift();
+    // Extract timestamps and prices
+    const timestamps = candles.map(c => new Date(c.time));
+    const prices = candles.map(c => c.close);
 
-    updateChart(candle);
-    return candle;
+    // Keep last N closes only
+    candles.forEach(candle => {
+      closes.push(candle.close);
+      if (closes.length > maxCandles) closes.shift();
+      updateChart({
+        t: candle.time,
+        o: candle.open,
+        h: candle.high,
+        l: candle.low,
+        c: candle.close
+      });
+    });
+
+    return candles;
   } catch (err) {
-    console.error('Candle fetch failed:', err);
+    console.error('❌ Candle fetch failed:', err.message || err);
     return null;
   }
 }
