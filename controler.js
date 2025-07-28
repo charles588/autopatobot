@@ -19,10 +19,12 @@ function logToFile(message) {
   const time = new Date().toISOString();
   fs.appendFileSync(logFile, `[${time}] ${message}\n`);
 }
-console.log('🔍 Symbol:', symbol, '| Interval:', interval);
 exports.getCandles = async (req, res) => {
   const symbol = req.query.symbol || 'BTCUSDT';
-  const interval = req.query.interval || '5m'; // ✅ Allow dynamic interval
+  const interval = req.query.interval || '5m';
+
+  // ✅ Put your log here (now symbol and interval are defined)
+  console.log('🔍 Symbol:', symbol, '| Interval:', interval);
 
   try {
     const { data } = await axios.get('https://api.binance.com/api/v3/klines', {
@@ -49,7 +51,7 @@ exports.getCandles = async (req, res) => {
 
   } catch (error) {
     console.error('Candle fetch error:', error.message);
-    res.status(500).json({ error: 'Error fetching candles' });
+    res.status(500).json({ error: 'Error fetching candles', details: error.message });
   }
 };
 exports.executeTrade = async (req, res) => {
