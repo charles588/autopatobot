@@ -7,7 +7,7 @@ const { SMA } = require('technicalindicators');
 const API_KEY = process.env.API_KEY;
 const API_SECRET = process.env.API_SECRET;
 const BINANCE_URL = 'https://api.binance.com';
-const SYMBOL = 'BTCUSDT';
+const DEFAULT_SYMBOL = 'BTCUSDT';
 const INTERVAL = '5m';
 const QUANTITY = 0.001;
 
@@ -19,11 +19,12 @@ function logToFile(message) {
   fs.appendFileSync('trading-log.txt', `[${time}] ${message}\n`);
 }
 
-// === Controller: Fetch Candlestick ===
+// === Candle Endpoint ===
 async function getCandles(req, res) {
+  const symbol = req.query.symbol || DEFAULT_SYMBOL;
   try {
     const { data } = await axios.get(`${BINANCE_URL}/api/v3/klines`, {
-      params: { symbol: SYMBOL, interval: INTERVAL, limit: 1 },
+      params: { symbol, interval: INTERVAL, limit: 1 },
     });
 
     const [time, open, high, low, close] = data[0];
@@ -35,29 +36,32 @@ async function getCandles(req, res) {
       c: parseFloat(close),
     });
   } catch (err) {
-    console.error('❌ Candle fetch error:', err.message);
+    console.error('❌ Candle fetch error:', err.response?.data || err.message);
     res.status(500).json({ error: 'Failed to fetch candle' });
   }
 }
 
-// === Controller: Execute Trade ===
+// === Trade Endpoint ===
 async function executeTrade(req, res) {
   try {
-    const closes = await getRecentCloses();
+    const symbol = req.body.symbol || DEFAULT_SYMBOL;
+    const interval = req.body.interval || '5m'; // ✅ dynamic from client
+
+    const closes = await getRecentCloses(symbol, interval);
     const latestClose = closes.at(-1);
     const signal = smaCrossoverStrategy(closes);
 
-    logToFile(`📈 Candle Close: ${latestClose}`);
+    logToFile(`📈 Close (${interval}): ${latestClose}`);
     logToFile(`🔎 SMA Signal: ${signal}`);
 
     if (signal) {
-      await placeOrder(signal);
-      return res.json({ success: true, signal });
+      const result = await placeOrder(signal, symbol);
+      return res.json({ success: true, signal, interval, result });
     }
 
     return res.json({ success: false, message: 'No signal' });
   } catch (err) {
-    console.error('❌ Trade execution error:', err.message);
+    console.error('❌ Trade execution error:', err.response?.data || err.message);
     res.status(500).json({ error: err.message });
   }
 }
@@ -65,7 +69,7 @@ async function executeTrade(req, res) {
 // === Helpers ===
 async function getRecentCloses() {
   const { data } = await axios.get(`${BINANCE_URL}/api/v3/klines`, {
-    params: { symbol: SYMBOL, interval: INTERVAL, limit: 20 }
+    params: { symbol: DEFAULT_SYMBOL, interval: INTERVAL, limit: 20 }
   });
   return data.map(k => parseFloat(k[4]));
 }
@@ -88,9 +92,9 @@ function smaCrossoverStrategy(closes) {
   return null;
 }
 
-async function placeOrder(side) {
+async function placeOrder(side, symbol = DEFAULT_SYMBOL) {
   const timestamp = Date.now();
-  const params = `symbol=${SYMBOL}&side=${side}&type=MARKET&quantity=${QUANTITY}&timestamp=${timestamp}`;
+  const params = `symbol=${DEFAULT_SYMBOL}&side=${side}&type=MARKET&quantity=${QUANTITY}&timestamp=${timestamp}`;
   const signature = crypto.createHmac('sha256', API_SECRET).update(params).digest('hex');
 
   const url = `${BINANCE_URL}/api/v3/order?${params}&signature=${signature}`;

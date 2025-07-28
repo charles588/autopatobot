@@ -143,45 +143,44 @@
 </footer>
 
 <script>
-  const PASSWORD = 'just4pat';
-  const API_BASE_URL = 'https://autopatobot.onrender.com';
-  let chart, tradingInterval, autoTrading = false, activePosition = null;let position = null;          // ← Add this here
-let isLoggedIn = false;  
-  const  closes = [], maxCandles = 100;
+const PASSWORD = 'just4pat';
+const API_BASE_URL = 'https://autopatobot.onrender.com';
+let chart, tradingInterval, autoTrading = false, isLoggedIn = false, position = null;
+const closes = [], maxCandles = 100;
+let lastCandleTime = 0;
 
-  function checkPassword() {
+function checkPassword() {
   const pass = document.getElementById('passwordInput').value;
   if (pass === PASSWORD) {
     document.getElementById('authOverlay').style.display = 'none';
     document.getElementById('dashboard').style.display = 'grid';
     isLoggedIn = true;
-    initChart(); // ✅ Keep only this one
+    initChart();
   } else {
     document.getElementById('authError').style.display = 'block';
   }
 }
-  function initChart() {
-    chart = new Chart(document.getElementById('tradeChart').getContext('2d'), {
-      type: 'candlestick',
-      data: {
-        datasets: [
-          { label: 'Price', data: [] },
-          { label: 'SMA 5', data: [], type: 'line', borderColor: '#ff7b72', pointRadius: 0 },
-          { label: 'SMA 10', data: [], type: 'line', borderColor: '#f2cc60', pointRadius: 0 }
-        ]
-      },
-      options: {
-        plugins: { legend: { labels: { color: '#c9d1d9' } } },
-        scales: {
-          x: { type: 'time', time: { unit: 'minute' }, ticks: { color: '#8b949e' } },
-          y: { ticks: { color: '#8b949e' } }
-        }
-      }
-    });
-    startTradingLoop();
-  }
 
-let lastCandleTime = 0; // 👈 Declare this OUTSIDE the function (global)
+function initChart() {
+  chart = new Chart(document.getElementById('tradeChart').getContext('2d'), {
+    type: 'candlestick',
+    data: {
+      datasets: [
+        { label: 'Price', data: [] },
+        { label: 'SMA 5', data: [], type: 'line', borderColor: '#ff7b72', pointRadius: 0 },
+        { label: 'SMA 10', data: [], type: 'line', borderColor: '#f2cc60', pointRadius: 0 }
+      ]
+    },
+    options: {
+      plugins: { legend: { labels: { color: '#c9d1d9' } } },
+      scales: {
+        x: { type: 'time', time: { unit: 'minute' }, ticks: { color: '#8b949e' } },
+        y: { ticks: { color: '#8b949e' } }
+      }
+    }
+  });
+  startTradingLoop();
+}
 
 async function fetchCandle() {
   const symbol = document.getElementById('pairSelect').value;
@@ -191,94 +190,83 @@ async function fetchCandle() {
 
   try {
     const res = await axios.get(`${API_BASE_URL}/api/candle?symbol=${symbol}&interval=${interval}`);
-    const candles = res.data.candles;
+    const { t, o, h, l, c } = res.data;
+    if (t === lastCandleTime) return null;
+    lastCandleTime = t;
 
-    if (!candles.length) {
-      console.warn('⚠️ No candlestick data returned');
-      return null;
-    }
-
-    const latest = candles[candles.length - 1];
-
-    // ✅ Skip if same candle already processed
-    if (latest.time === lastCandleTime) return null;
-    lastCandleTime = latest.time;
-
-    const candle = {
-      t: latest.time,
-      o: latest.open,
-      h: latest.high,
-      l: latest.low,
-      c: latest.close
-    };
-
-    closes.push(candle.c);
+    const candle = { t, o, h, l, c };
+    closes.push(c);
     if (closes.length > maxCandles) closes.shift();
-
     updateChart(candle);
     return candle;
-
   } catch (err) {
     console.error('Candle fetch failed:', err);
     return null;
   }
 }
-  function calculateSMA(arr, len) {
-    if (arr.length < len) return null;
-    return arr.slice(-len).reduce((sum, val) => sum + val, 0) / len;
-  }
 
-  function updateChart(candle) {
-    const [cs, sma5, sma10] = chart.data.datasets;
-    cs.data.push(candle);
- if (cs.data.length > maxCandles) {
-  cs.data.shift();
-  if (sma5.data.length) sma5.data.shift();
-  if (sma10.data.length) sma10.data.shift();
+function calculateSMA(arr, len) {
+  if (arr.length < len) return null;
+  return arr.slice(-len).reduce((sum, val) => sum + val, 0) / len;
 }
-    const s5 = calculateSMA(closes, 5);
-    const s10 = calculateSMA(closes, 10);
-    if (s5) sma5.data.push({ x: candle.t, y: s5 });
-    if (s10) sma10.data.push({ x: candle.t, y: s10 });
-    chart.update();
-  }
 
-  function getSMASignal() {
-    if (closes.length < 11) return 'HOLD';
-    const [sma5, sma10] = [calculateSMA(closes, 5), calculateSMA(closes, 10)];
-    const [prev5, prev10] = [calculateSMA(closes.slice(0, -1), 5), calculateSMA(closes.slice(0, -1), 10)];
-    if (prev5 <= prev10 && sma5 > sma10) return 'BUY';
-    if (prev5 >= prev10 && sma5 < sma10) return 'SELL';
-    return 'HOLD';
+function updateChart(candle) {
+  const [cs, sma5, sma10] = chart.data.datasets;
+  cs.data.push(candle);
+  if (cs.data.length > maxCandles) {
+    cs.data.shift();
+    sma5.data.shift();
+    sma10.data.shift();
   }
+  const s5 = calculateSMA(closes, 5);
+  const s10 = calculateSMA(closes, 10);
+  if (s5) sma5.data.push({ x: candle.t, y: s5 });
+  if (s10) sma10.data.push({ x: candle.t, y: s10 });
+  chart.update();
+}
 
-  function executeTrade(action) {
-    const symbol = document.getElementById('pairSelect').value;
-    const quantity = parseFloat(document.getElementById('qtyInput').value);
-    axios.post(`${API_BASE_URL}/api/trade`, { action, symbol, quantity })
-      .then(res => logTrade(`Trade executed: ${action.toUpperCase()}`))
-      .catch(err => logTrade(`Trade Error: ${err.response?.data?.error || err.message}`));
-  }
+function getSMASignal() {
+  if (closes.length < 11) return 'HOLD';
+  const sma5 = calculateSMA(closes, 5);
+  const sma10 = calculateSMA(closes, 10);
+  const prev5 = calculateSMA(closes.slice(0, -1), 5);
+  const prev10 = calculateSMA(closes.slice(0, -1), 10);
+  if (prev5 <= prev10 && sma5 > sma10) return 'BUY';
+  if (prev5 >= prev10 && sma5 < sma10) return 'SELL';
+  return 'HOLD';
+}
 
-  function logTrade(msg) {
-    const log = document.getElementById('tradeLog');
-    const entry = document.createElement('div');
-    entry.textContent = msg;
-    log.appendChild(entry);
-    log.scrollTop = log.scrollHeight;
-  }
+function executeTrade(action) {
+  const symbol = document.getElementById('pairSelect').value;
+  const quantity = parseFloat(document.getElementById('qtyInput').value);
+  axios.post(`${API_BASE_URL}/api/trade`, { action, symbol, quantity })
+    .then(() => logTrade(`Trade executed: ${action.toUpperCase()}`))
+    .catch(err => logTrade(`Trade Error: ${err.response?.data?.error || err.message}`));
+}
 
-  function toggleTrading() {
-    autoTrading = !autoTrading;
-    document.getElementById('status').innerText = autoTrading ? 'Running' : 'Stopped';
-    document.querySelector('.control-panel button').innerText = autoTrading ? 'Stop Auto Trading' : 'Start Auto Trading';
-    autoTrading ?tradingInterval = setInterval(startTradingLoop, parseInt(document.getElementById('timeframeSelect').value)) : clearInterval(tradingInterval);
+function logTrade(msg) {
+  const log = document.getElementById('tradeLog');
+  const entry = document.createElement('div');
+  entry.textContent = msg;
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+}
+
+function toggleTrading() {
+  autoTrading = !autoTrading;
+  document.getElementById('status').innerText = autoTrading ? 'Running' : 'Stopped';
+  document.querySelector('.control-panel button').innerText = autoTrading ? 'Stop Auto Trading' : 'Start Auto Trading';
+  if (autoTrading) {
+    startTradingLoop();
+    tradingInterval = setInterval(startTradingLoop, parseInt(document.getElementById('timeframeSelect').value));
+  } else {
+    clearInterval(tradingInterval);
   }
+}
 
 async function startTradingLoop() {
   if (!isLoggedIn) return;
-
-  const candle = await fetchCandle(); // Already updates chart inside
+  const candle = await fetchCandle();
   if (!candle) return;
 
   const signal = getSMASignal();
@@ -298,7 +286,6 @@ async function startTradingLoop() {
     const price = candle.c;
     const hitTP = (position.type === 'BUY' && price >= position.tp) || (position.type === 'SELL' && price <= position.tp);
     const hitSL = (position.type === 'BUY' && price <= position.sl) || (position.type === 'SELL' && price >= position.sl);
-
     if (hitTP || hitSL) {
       actionText += ` | ${hitTP ? 'TP' : 'SL'} HIT at $${price.toFixed(2)} | CLOSED ${position.type}`;
       position = null;

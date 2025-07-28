@@ -21,11 +21,13 @@ function logToFile(message) {
 }
 exports.getCandles = async (req, res) => {
   const symbol = req.query.symbol || 'BTCUSDT';
+  const interval = req.query.interval || '5m'; // ✅ Allow dynamic interval
+
   try {
     const { data } = await axios.get('https://api.binance.com/api/v3/klines', {
       params: {
         symbol,
-        interval: '5m',
+        interval,
         limit: 50
       }
     });
@@ -42,7 +44,7 @@ exports.getCandles = async (req, res) => {
       return res.status(404).json({ error: 'No candles fetched' });
     }
 
-    res.json({ candles }); // ✅ Return full array
+    res.json({ candles });
 
   } catch (error) {
     console.error('Candle fetch error:', error.message);
