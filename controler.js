@@ -19,6 +19,7 @@ function logToFile(message) {
   const time = new Date().toISOString();
   fs.appendFileSync(logFile, `[${time}] ${message}\n`);
 }
+console.log('🔍 Symbol:', symbol, '| Interval:', interval);
 exports.getCandles = async (req, res) => {
   const symbol = req.query.symbol || 'BTCUSDT';
   const interval = req.query.interval || '5m'; // ✅ Allow dynamic interval
