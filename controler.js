@@ -42,7 +42,14 @@ exports.getCandles = async (req, res) => {
       return res.status(404).json({ error: 'No candles fetched' });
     }
 
-    res.json({ candles });
+    const lastCandle = candles[candles.length - 1];
+res.json({
+  time: lastCandle.time,
+  open: lastCandle.open,
+  high: lastCandle.high,
+  low: lastCandle.low,
+  close: lastCandle.close
+});
   } catch (error) {
     console.error('Candle fetch error:', error.message);
     res.status(500).json({ error: 'Error fetching candles' });
