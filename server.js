@@ -9,7 +9,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // ✅ Load trading controller (adjust path if needed)
-const tradeController = require('./controllers/tradeController');
+const tradeController = require('./controller'); 
 
 // ✅ Middleware
 app.use(cors());
