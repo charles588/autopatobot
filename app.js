@@ -2,28 +2,34 @@ require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const crypto = require('crypto');
-const cors = require('cors'); // ✅ ADD CORS
+const cors = require('cors');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 // ===== MIDDLEWARE =====
-app.use(cors());                   // ✅ ENABLE CORS for all origins
-app.use(express.static('public')); 
-app.use(express.json());
+app.use(cors()); // ✅ Enable CORS for all origins
+app.use(express.static('public')); // Serve frontend files
+app.use(express.json()); // Parse JSON body
 
 // ===== ROUTES =====
-const candleRoutes = require('./routes/candleRoutes');
-app.use('/api', candleRoutes);
+// ✅ If you later add routes in /routes/candleRoutes.js, uncomment this
+// const candleRoutes = require('./routes/candleRoutes');
+// app.use('/api', candleRoutes);
+
 // ✅ Get latest 5m candlestick from Binance
 app.get('/api/candle', async (req, res) => {
     const symbol = req.query.symbol?.toUpperCase() || 'BTCUSDT';
-   const interval = req.query.interval || '5m';
+    const interval = req.query.interval || '5m';
 
     try {
         const response = await axios.get('https://api.binance.com/api/v3/klines', {
             params: { symbol, interval, limit: 1 }
         });
+
+        if (!response.data || !Array.isArray(response.data) || response.data.length === 0) {
+            return res.status(400).json({ error: 'No candlestick data returned from Binance' });
+        }
 
         const [time, open, high, low, close] = response.data[0];
 
@@ -92,8 +98,13 @@ app.post('/api/trade', async (req, res) => {
     }
 });
 
+// ===== HEALTH CHECK (OPTIONAL) =====
+app.get('/', (req, res) => {
+    res.send('✅ AutoPatoBot server is running');
+});
+
 // ===== START SERVER =====
 app.listen(port, () => {
-  console.log(`✅ Server is live on port ${port}`);
-  console.log(`🌐 Visit on Render: https://autopatobot.onrender.com`);
+    console.log(`✅ Server is live on port ${port}`);
+    console.log(`🌐 Visit on Render: https://autopatobot.onrender.com`);
 });

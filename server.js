@@ -1,46 +1,39 @@
+require('dotenv').config(); // Load .env
+
 const express = require('express');
-const cors = require('cors'); // ✅ Import CORS
+const cors = require('cors');
+const path = require('path');
 const app = express();
 
-// Use dynamic port for Render or default to 3000 locally
+// Load port from env or default
 const port = process.env.PORT || 3000;
 
-// ✅ Enable CORS for all routes
+// ✅ Load trading controller (adjust path if needed)
+const tradeController = require('./tradeController');
+
+// ✅ Middleware
 app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public'))); // Serve frontend
 
-// Middleware
-app.use(express.static('public')); // Serve frontend files from 'public' folder
-app.use(express.json()); // Parse JSON requests
-
-// Root route - optional health check
+// ✅ Root Health Check
 app.get('/', (req, res) => {
-  res.send('✅ Server is live!');
+  res.send('✅ AutoPatobot server is running!');
 });
 
-// Simulated candlestick endpoint
-app.get('/api/candle', (req, res) => {
-  const base = 29500 + Math.random() * 100;
-  const open = base;
-  const close = base + (Math.random() - 0.5) * 50;
-  const high = Math.max(open, close) + Math.random() * 20;
-  const low = Math.min(open, close) - Math.random() * 20;
+// ✅ Candle endpoint (Binance-backed)
+app.get('/api/candle', tradeController.getCandles);
 
-  res.json({ open, high, low, close });
-});
+// ✅ Trade endpoint (executes real trade)
+app.post('/api/trade', tradeController.executeTrade);
 
-// Simulated trade endpoint
-app.post('/api/trade', (req, res) => {
-  console.log('📩 Trade received:', req.body);
-  res.json({ status: '✅ Trade executed', action: req.body.action });
-});
-
-// (Optional) Endpoint to return server host
+// ✅ Optional: return client host info
 app.get('/api/host', (req, res) => {
   res.json({ host: req.headers.host });
 });
 
-// Start server
+// ✅ Start the server
 app.listen(port, () => {
   console.log(`🚀 Server running on port ${port}`);
-  console.log(`🌐 Visit: https://autopatobot.onrender.com`);
+  console.log(`🌐 Visit your app at http://localhost:${port}`);
 });
