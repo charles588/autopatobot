@@ -181,6 +181,8 @@ let isLoggedIn = false;
     startTradingLoop();
   }
 
+let lastCandleTime = 0; // 👈 Declare this OUTSIDE the function (global)
+
 async function fetchCandle() {
   const symbol = document.getElementById('pairSelect').value;
   const intervalMs = parseInt(document.getElementById('timeframeSelect').value);
@@ -191,35 +193,36 @@ async function fetchCandle() {
     const res = await axios.get(`${API_BASE_URL}/api/candle?symbol=${symbol}&interval=${interval}`);
     const candles = res.data.candles;
 
-    if (!Array.isArray(candles) || candles.length === 0) {
+    if (!candles.length) {
       console.warn('⚠️ No candlestick data returned');
       return null;
     }
 
-    // Extract timestamps and prices
-    const timestamps = candles.map(c => new Date(c.time));
-    const prices = candles.map(c => c.close);
+    const latest = candles[candles.length - 1];
 
-    // Keep last N closes only
-    candles.forEach(candle => {
-      closes.push(candle.close);
-      if (closes.length > maxCandles) closes.shift();
-      updateChart({
-        t: candle.time,
-        o: candle.open,
-        h: candle.high,
-        l: candle.low,
-        c: candle.close
-      });
-    });
+    // ✅ Skip if same candle already processed
+    if (latest.time === lastCandleTime) return null;
+    lastCandleTime = latest.time;
 
-    return candles;
+    const candle = {
+      t: latest.time,
+      o: latest.open,
+      h: latest.high,
+      l: latest.low,
+      c: latest.close
+    };
+
+    closes.push(candle.c);
+    if (closes.length > maxCandles) closes.shift();
+
+    updateChart(candle);
+    return candle;
+
   } catch (err) {
-    console.error('❌ Candle fetch failed:', err.message || err);
+    console.error('Candle fetch failed:', err);
     return null;
   }
 }
-
   function calculateSMA(arr, len) {
     if (arr.length < len) return null;
     return arr.slice(-len).reduce((sum, val) => sum + val, 0) / len;
@@ -228,9 +231,11 @@ async function fetchCandle() {
   function updateChart(candle) {
     const [cs, sma5, sma10] = chart.data.datasets;
     cs.data.push(candle);
-    if (cs.data.length > maxCandles) {
-      cs.data.shift(); sma5.data.shift(); sma10.data.shift();
-    }
+ if (cs.data.length > maxCandles) {
+  cs.data.shift();
+  if (sma5.data.length) sma5.data.shift();
+  if (sma10.data.length) sma10.data.shift();
+}
     const s5 = calculateSMA(closes, 5);
     const s10 = calculateSMA(closes, 10);
     if (s5) sma5.data.push({ x: candle.t, y: s5 });
